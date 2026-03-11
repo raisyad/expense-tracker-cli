@@ -82,12 +82,16 @@ var lengtestId, lengtestAmount, lengtestDesc, lengtestCat, lengtestDate, lengtes
 
 var reader = bufio.NewReader(os.Stdin)
 
+const TEMPLATE_TRANSACTION_NO_OUTPUT = "Belum Ada Transaksi"
+
 func showMenus() {
 	fmt.Println("=== Expense Tracker CLI ===")
-	fmt.Println("1. Tambah Pengeluaran")
-	fmt.Println("2. Lihat Pengeluaran")
-	fmt.Println("3. Hapus Pengeluaran")
-	fmt.Println("4. Keluar")
+	fmt.Println("1. Tambah Data")
+	fmt.Println("2. Lihat Data")
+	fmt.Println("3. Hapus Data")
+	fmt.Println("4. Update Data")
+	fmt.Println("5. Ringkasan Transaksi")
+	fmt.Println("6. Keluar")
 	fmt.Print("Pilih menu: ")
 }
 
@@ -134,7 +138,7 @@ func add() {
 		description: title,
 		category:    category,
 		date:        date,
-		types:       types,
+		types:       strings.ToLower(types),
 	}
 	transactions = append(transactions, transaction)
 	nextId++
@@ -143,7 +147,7 @@ func add() {
 
 func view() {
 	if len(transactions) == 0 {
-		fmt.Println("Belum ada transaksi.")
+		fmt.Println(TEMPLATE_TRANSACTION_NO_OUTPUT)
 		return
 	}
 
@@ -207,6 +211,125 @@ func view() {
 	fmt.Println(strings.Repeat("=", lineLen))
 }
 
+func delete() {
+	if len(transactions) == 0 {
+		fmt.Println(TEMPLATE_TRANSACTION_NO_OUTPUT)
+		return
+	}
+
+	view()
+	idStr := readLine("Masukkan ID yang ingin dihapus")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		fmt.Println("ID harus berupa angka!")
+		return
+	}
+
+	index := -1
+	for i, t := range transactions {
+		if t.id == id {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		fmt.Println("ID tidak ditemukan!")
+		return
+	}
+
+	transactions = append(transactions[:index], transactions[index+1:]...)
+	clearScreen()
+	fmt.Println("Transaksi berhasil dihapus!")
+}
+
+func update() {
+	if len(transactions) == 0 {
+		fmt.Println(TEMPLATE_TRANSACTION_NO_OUTPUT)
+		return
+	}
+
+	view()
+	idStr := readLine("Masukkan ID yang ingin diupdate")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		fmt.Println("ID harus berupa angka!")
+		return
+	}
+
+	index := -1
+	for i, t := range transactions {
+		if t.id == id {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		fmt.Println("ID tidak ditemukan!")
+		return
+	}
+
+	fmt.Println("Kosongkan input jika tidak ingin mengubah nilai.")
+
+	newDescription := readLine("Judul baru: ")
+	if newDescription != "" {
+		transactions[index].description = newDescription
+	}
+
+	newAmountInput := readLine("Nominal baru: ")
+	if newAmountInput != "" {
+		newAmount, err := strconv.Atoi(newAmountInput)
+		if err != nil || newAmount <= 0 {
+			fmt.Println("Nominal tidak valid. Update dibatalkan.")
+			return
+		}
+		transactions[index].amount = newAmount
+	}
+
+	newType := strings.ToLower(readLine("Tipe baru (income/expense): "))
+	if newType != "" {
+		if newType != "income" && newType != "expense" {
+			fmt.Println("Tipe tidak valid. Update dibatalkan.")
+			return
+		}
+		transactions[index].types = newType
+	}
+
+	newCategory := readLine("Kategori baru: ")
+	if newCategory != "" {
+		transactions[index].category = newCategory
+	}
+	clearScreen()
+	fmt.Println("Transaksi berhasil diupdate.")
+}
+
+func summary() {
+	if len(transactions) == 0 {
+		fmt.Println(TEMPLATE_TRANSACTION_NO_OUTPUT)
+		return
+	}
+
+	var totalIncome float64
+	var totalExpense float64
+
+	for _, t := range transactions {
+		if t.types == "income" {
+			totalIncome += float64(t.amount)
+		} else if t.types == "expense" {
+			totalExpense += float64(t.amount)
+		}
+	}
+
+	balance := totalIncome - totalExpense
+
+	fmt.Println("\n=== Ringkasan Transaksi ===")
+	fmt.Printf("Total Pemasukan: Rp %.2f\n", totalIncome)
+	fmt.Printf("Total Pengeluaran: Rp %.2f\n", totalExpense)
+	fmt.Printf("Saldo Akhir: Rp %.2f\n", balance)
+	fmt.Println("============================")
+}
+
 func main() {
 	fmt.Print("Wilujeng Sumping! ^_^\n\n")
 	showMenus()
@@ -225,8 +348,17 @@ func main() {
 			showMenus()
 		case 3:
 			clearScreen()
-			fmt.Println("Hapus Pengeluaran (Belum diimplementasi)")
+			delete()
+			showMenus()
 		case 4:
+			clearScreen()
+			update()
+			showMenus()
+		case 5:
+			clearScreen()
+			summary()
+			showMenus()
+		case 6:
 			clearScreen()
 			fmt.Println("Terima Kasih telah mencoba! ^_^")
 			return
